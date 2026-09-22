@@ -18,6 +18,11 @@ function M.is_open()
     return M.win ~= nil and vim.api.nvim_win_is_valid(M.win)
 end
 
+---Open in another tab page: floats are per tab, so it is not visible here.
+function M.in_other_tab()
+    return M.is_open() and vim.api.nvim_win_get_tabpage(M.win) ~= vim.api.nvim_get_current_tabpage()
+end
+
 function M.is_focused()
     return M.is_open() and vim.api.nvim_get_current_win() == M.win
 end
@@ -144,7 +149,8 @@ end
 
 ---Show another terminal in the already-open float.
 function M.show(t)
-    remember(term.terms[M.id])
+    -- Only when focused: otherwise the mode read would be the editor's.
+    M.remember_current()
     vim.api.nvim_win_set_buf(M.win, t.buf)
     M.id = t.id
     term.last = t.id

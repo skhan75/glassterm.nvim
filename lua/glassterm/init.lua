@@ -211,6 +211,9 @@ end
 function M.toggle(arg)
     init_runtime()
     local opts = parse(arg)
+    if window.in_other_tab() then
+        window.hide({ remember = false })
+    end
     if window.is_open() then
         if opts.id and opts.id ~= window.id then
             local t = term.ensure(opts.id)

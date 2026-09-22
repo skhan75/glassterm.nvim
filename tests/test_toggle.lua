@@ -91,6 +91,17 @@ T["prewarm"]["is skipped when no UI is attached"] = function()
     eq(child.lua_get("term() == nil"), true)
 end
 
+T["toggle"]["opens in the current tab when the float is open in another"] = function()
+    setup({ hide_on_leave = false })
+    child.lua("gt().toggle()")
+    child.cmd("wincmd p | tabnew")
+    local tab = child.api.nvim_get_current_tabpage()
+    child.lua("gt().toggle()")
+    eq(child.api.nvim_get_current_tabpage(), tab)
+    eq(child.lua_get("vim.api.nvim_win_get_tabpage(require('glassterm.window').win)"), tab)
+    eq(child.lua_get("vim.bo.buftype"), "terminal")
+end
+
 T["hide on leave"] = MiniTest.new_set()
 
 T["hide on leave"]["hides the float when focus moves to an editor window"] = function()
@@ -129,6 +140,20 @@ T["numbered terminals"]["swaps the buffer inside the open float"] = function()
     eq(child.lua_get("floats()[1]"), win)
     eq(child.lua_get("vim.b.glassterm"), 2)
     eq(child.lua_get("require('glassterm.term').ids()"), { 1, 2 })
+end
+
+T["numbered terminals"]["switching from outside the float keeps each terminal's mode"] = function()
+    setup({ hide_on_leave = false })
+    child.lua("gt().toggle(1)")
+    eq(child.api.nvim_get_mode().mode, "t")
+    -- Leave terminal 1 while still typing in it, then go to insert mode in code.
+    child.lua("vim.api.nvim_set_current_win(require('glassterm.window').prev)")
+    child.type_keys("i")
+    eq(child.api.nvim_get_mode().mode, "i")
+    child.lua("gt().toggle(2)")
+    child.lua("gt().toggle(1)")
+    eq(child.lua_get("vim.b.glassterm"), 1)
+    eq(child.api.nvim_get_mode().mode, "t")
 end
 
 T["numbered terminals"]["uses a count typed before the toggle key"] = function()

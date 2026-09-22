@@ -9,6 +9,8 @@ local T = MiniTest.new_set({
     hooks = {
         pre_case = function()
             child.start_editor(24, 80)
+            -- Neovim's default statusline differs between versions; pin one.
+            child.o.statusline = "%f%=%l,%c"
             child.api.nvim_buf_set_lines(0, 0, -1, false, {
                 "local function greet(name)",
                 "    return 'hello ' .. name",

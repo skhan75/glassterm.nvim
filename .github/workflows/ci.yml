@@ -9,6 +9,7 @@ jobs:
   test:
     name: test (${{ matrix.os }}, nvim ${{ matrix.nvim }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     # Nightly may change default highlights or APIs; report it without blocking.
     continue-on-error: ${{ matrix.nvim == 'nightly' }}
     strategy:
