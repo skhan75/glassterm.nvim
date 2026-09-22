@@ -2,7 +2,7 @@ NVIM ?= nvim
 STYLUA_VERSION ?= 2.1.0
 STYLUA := deps/bin/stylua
 
-.PHONY: test test-ci test-file deps format lint bench clean
+.PHONY: test test-ci test-file deps format lint bench demo clean
 
 # Run every tests/test_*.lua file.
 test: deps
@@ -45,6 +45,13 @@ format: $(STYLUA)
 
 lint: $(STYLUA)
 	$(STYLUA) --check lua plugin tests
+
+# Record the README GIFs into assets/ (needs vhs, zsh and Hack Nerd Font).
+demo:
+	bash demo/setup.sh
+	@for t in demo/tapes/[a-z]*.tape; do \
+		echo "== $$t"; GLASSTERM_ROOT=$(CURDIR) vhs $$t >/dev/null || exit 1; \
+	done
 
 # Keypress-to-redraw latency through a real pseudo-terminal.
 bench:
