@@ -2,11 +2,21 @@ NVIM ?= nvim
 STYLUA_VERSION ?= 2.1.0
 STYLUA := deps/bin/stylua
 
-.PHONY: test test-file deps format lint bench clean
+.PHONY: test test-ci test-file deps format lint bench clean
 
 # Run every tests/test_*.lua file.
 test: deps
 	$(NVIM) --headless --noplugin -u tests/minimal_init.lua -c "lua MiniTest.run()"
+
+# CI: one process per file under a time limit, so a hang names its file.
+# (perl's alarm is the portable timeout: macOS has no GNU timeout.)
+test-ci: deps
+	@fail=0; for f in tests/test_*.lua; do \
+		echo "== $$f"; \
+		perl -e 'alarm shift; exec @ARGV' 180 \
+			$(NVIM) --headless --noplugin -u tests/minimal_init.lua -c "lua MiniTest.run_file('$$f')" \
+			|| { echo "!! $$f failed or timed out"; fail=1; }; \
+	done; exit $$fail
 
 # Run one file: make test-file FILE=tests/test_styles.lua
 test-file: deps

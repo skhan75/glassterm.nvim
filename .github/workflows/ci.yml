@@ -30,7 +30,7 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install fish
       - run: nvim --version | head -1
-      - run: make test
+      - run: make test-ci
 
   lint:
     runs-on: ubuntu-latest
