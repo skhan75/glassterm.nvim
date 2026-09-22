@@ -200,7 +200,10 @@ terminal emulator's own paint. On an M3 Pro:
 | 120 × 40 | 2.7 ms | 4.7 ms |
 
 glassterm's own Lua work is about 0.07 ms of that; the rest is Neovim
-redrawing the screen. Starting a new interactive zsh with a typical
+redrawing the screen. In a full everyday config (treesitter, lualine, a Lua
+statuscolumn, zsh with oh-my-zsh and starship) at 200 × 55 a toggle took
+about 8 ms, of which glassterm plus every plugin's event handlers was 0.35 ms.
+The rest is Neovim redrawing that config's editor. Starting a new interactive zsh with a typical
 oh-my-zsh setup took about 1.9 s on the same machine, which is the wait
 that pre-starting removes.
 
