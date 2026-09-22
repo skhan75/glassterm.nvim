@@ -62,7 +62,11 @@ local function on_request(args)
             else
                 notify(("✗ exit %s%s"):format(ev.status or "?", secs), vim.log.levels.ERROR)
             end
-        elseif not seen and config.options.integration.notify_on_failure and (ev.status or 0) ~= 0 then
+        elseif
+            not seen
+            and config.options.integration.notify_on_failure
+            and (ev.status or 0) ~= 0
+        then
             notify(("command failed (exit %d)%s"):format(ev.status, secs), vim.log.levels.WARN)
         end
     end
@@ -183,6 +187,7 @@ function M.setup(opts)
     init_runtime()
     set_keymaps()
     schedule_prewarm()
+    M._did_setup = true
 end
 
 ---Start terminal 1's shell in the background if it is not running.

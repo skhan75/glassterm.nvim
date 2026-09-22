@@ -14,7 +14,9 @@ T = MiniTest.new_set({
 })
 
 local function setup(extra)
-    child.setup(vim.tbl_deep_extend("force", { shell = H.FAKE_SHELL, prewarm = false }, extra or {}))
+    child.setup(
+        vim.tbl_deep_extend("force", { shell = H.FAKE_SHELL, prewarm = false }, extra or {})
+    )
 end
 
 local function float_count()

@@ -97,7 +97,10 @@ function M.spawn(id)
     if not ok or type(job) ~= "number" or job <= 0 then
         pcall(vim.api.nvim_buf_delete, buf, { force = true })
         vim.notify(
-            ("glassterm: could not start %s%s"):format(argv[1], ok and "" or (": " .. tostring(job))),
+            ("glassterm: could not start %s%s"):format(
+                argv[1],
+                ok and "" or (": " .. tostring(job))
+            ),
             vim.log.levels.ERROR
         )
         return nil

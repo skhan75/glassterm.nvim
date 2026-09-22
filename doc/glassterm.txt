@@ -1,0 +1,255 @@
+*glassterm.txt*  A floating terminal that is already running when you ask for it
+
+Author:  Sami Ahmad Khan
+License: MIT
+
+==============================================================================
+CONTENTS                                                   *glassterm-contents*
+
+  1. Introduction ........................................ |glassterm|
+  2. Setup ............................................... |glassterm-setup|
+  3. Configuration ....................................... |glassterm-config|
+  4. Styles .............................................. |glassterm-styles|
+  5. Commands ............................................ |:Glassterm|
+  6. Lua API ............................................. |glassterm-api|
+  7. Shell integration ................................... |glassterm-integration|
+  8. Highlights .......................................... |glassterm-highlights|
+  9. Health .............................................. |glassterm-health|
+
+==============================================================================
+1. Introduction                                                    *glassterm*
+
+glassterm shows a terminal in a floating window over your code. The shell
+is started hidden in advance, so toggling only shows or hides a window over
+a live terminal buffer: no process starts and no code loads on the keypress.
+
+Behaviour:
+- Toggle: show the terminal; hide it if it is focused; focus it if it is
+  open but another window has focus. The same key works in normal, insert
+  and terminal mode. A count picks a numbered terminal: `2<M-t>`.
+- Pre-start: terminal 1's shell starts hidden `prewarm.delay_ms` after the UI
+  appears. Headless and scripted Neovim never start one.
+- Hide on leave: moving focus to an editor window hides the float. Focus
+  moving to another floating window (a picker, a menu) does not.
+- Exit: `exit` closes the float and removes the terminal. Terminal 1 is
+  pre-started again unless its shell died within a second of starting. A
+  shell that exits with a non-zero code is reported.
+- Mode memory: reopening puts you back at the prompt, or at the exact scroll
+  position if you left the terminal in normal mode.
+- Resize: the float follows editor resizes. Zoom resets when it hides.
+- A file opened from inside the float (|:edit|, a picker, |gf|) is moved to
+  the window you came from; the float hides.
+- |TermOpen| autocommands for glassterm shells run when the float is first
+  shown, in the float, so a `startinsert` in them never affects your editor.
+- Quitting Neovim never stops on the hidden shell.
+
+Requires Neovim 0.11 or newer.
+
+==============================================================================
+2. Setup                                                     *glassterm-setup*
+
+With lazy.nvim: >lua
+    { "skhan75/glassterm.nvim", lazy = false, opts = {} }
+<
+Otherwise: >lua
+    require("glassterm").setup()
+<
+`setup()` sets the keymaps, the autocommands and schedules the pre-start.
+It can be called again to change options.
+
+==============================================================================
+3. Configuration                                            *glassterm-config*
+
+Defaults: >lua
+    require("glassterm").setup({
+        style = "glass",
+        shell = nil,
+        prewarm = { enabled = true, delay_ms = 1000 },
+        hide_on_leave = true,
+        close_on_exit = true,
+        integration = { enabled = true, notify_on_failure = true },
+        ui = { hints = true },
+        keys = {
+            toggle = "<M-t>",
+            zoom = "<M-z>",
+            send = false,
+            rerun = false,
+        },
+        styles = {
+            glass = { width = 0.86, height = 0.80 },
+            drop = { height = 0.42 },
+            drawer = { width = 0.44, side = "right" },
+            capsule = { width = 76, height = 12, row = 0.26 },
+        },
+    })
+<
+                                                      *glassterm-config-style*
+style ~
+    Default style: "glass", "drop", "drawer" or "capsule".
+
+                                                      *glassterm-config-shell*
+shell ~
+    nil uses 'shell'. A string is split on whitespace; a list is used as the
+    argv as-is, e.g. `{ "/bin/zsh", "-l" }`.
+
+                                                    *glassterm-config-prewarm*
+prewarm ~
+    `enabled`: start terminal 1's shell hidden after the UI appears.
+    `delay_ms`: how long after. `prewarm = false` turns it off.
+
+                                              *glassterm-config-hide_on_leave*
+hide_on_leave ~
+    Hide the float when focus moves to a non-floating window.
+
+                                              *glassterm-config-close_on_exit*
+close_on_exit ~
+    Close the float and remove the terminal when its shell exits. When false
+    the finished terminal stays visible until you toggle again.
+
+                                                *glassterm-config-integration*
+integration ~
+    `enabled`: load the shell hook (|glassterm-integration|).
+    `notify_on_failure`: notify when a command fails while the float is
+    hidden. `integration = false` turns both off.
+
+                                                         *glassterm-config-ui*
+ui ~
+    `hints`: show key hints in the border.
+
+                                                       *glassterm-config-keys*
+keys ~
+    `toggle`: normal, insert and terminal mode.
+    `zoom`: inside glassterm terminals only (normal and terminal mode).
+    `send`: normal mode sends the current line, visual mode the selection.
+    `rerun`: normal mode.
+    Any key can be `false`.
+
+                                                     *glassterm-config-styles*
+styles ~
+    Per-style sizes. A number <= 1 is a fraction of the editor, a larger
+    number is a count of cells. `row` (capsule) may be 0.
+    `drawer.side` is "right" or "left".
+
+==============================================================================
+4. Styles                                                   *glassterm-styles*
+
+    glass     86% x 80%, centered, rounded border, title in the top border
+    drop      full width x 42% from the top, only a bottom edge (accent
+              color), title and hints in that edge
+    drawer    44% x full height on the right (or left), only the inner edge,
+              title in a winbar row
+    capsule   76 x 12 in the upper middle, rounded accent border, centered
+              title
+
+Zoom (|glassterm.zoom()|) turns any style into a full-editor window.
+
+Switch styles with |glassterm-config-style|, `:Glassterm style {name}`, or for
+one toggle: >lua
+    require("glassterm").toggle({ style = "capsule" })
+<
+==============================================================================
+5. Commands                                                       *:Glassterm*
+
+:Glassterm                    Same as `:Glassterm toggle`.
+:Glassterm toggle [n]         Toggle terminal [n] (default: the last one).
+:Glassterm open [n]           Show and focus terminal [n].
+:Glassterm close              Hide the float.
+:Glassterm zoom               Zoom the open float to the full editor and back.
+:Glassterm style {name}       Switch style; reshapes an open float in place.
+:Glassterm send {text}        Run {text} in the terminal and show it.
+:{range}Glassterm send        Run buffer lines {range} in the terminal.
+:Glassterm rerun              Re-run the shell's last command without
+                              showing the float (zsh, bash, fish).
+
+==============================================================================
+6. Lua API                                                     *glassterm-api*
+
+                                                         *glassterm.setup()*
+setup({opts})       See |glassterm-config|.
+
+                                                        *glassterm.toggle()*
+toggle({arg})       {arg} is nil, a terminal number, or a table
+                    `{ id = n, style = "drop" }`.
+
+                                                          *glassterm.open()*
+open({arg})         Show and focus; never hides.
+
+                                                         *glassterm.close()*
+close()             Hide the float.
+
+                                                          *glassterm.zoom()*
+zoom()              Toggle zoom of the open float.
+
+                                                     *glassterm.set_style()*
+set_style({name})   Switch the default style.
+
+                                                          *glassterm.send()*
+send({text})        {text} is a string or a list of lines. Each line is
+                    typed into the terminal followed by Enter.
+
+                                                         *glassterm.rerun()*
+rerun()             Re-run the last command. Refuses while a command is
+                    running. With |glassterm-integration| active, notifies
+                    the result with its duration.
+
+                                                       *glassterm.prewarm()*
+prewarm()           Start terminal 1's shell now if it is not running.
+
+                                                       *glassterm.is_open()*
+is_open()           Whether the float is shown.
+
+Terminal buffers are named `glassterm://{n}`, have 'filetype' "glassterm"
+and `b:glassterm` set to their number.
+
+==============================================================================
+7. Shell integration                                   *glassterm-integration*
+
+Shells started by glassterm report through standard escape codes:
+
+    OSC 7            current folder, at each prompt
+    OSC 133 ; A      a prompt starts (used by Neovim for |terminal_[[|)
+    OSC 133 ; C      a command starts
+    OSC 133 ; D ; n  the command ended with exit status n
+
+glassterm shows the folder in the title, colors the border with
+|hl-GlasstermError| and adds an `exit n` chip after a failure (cleared when
+the next command starts), and notifies failures while the float is hidden.
+
+The hook is loaded without editing any file:
+
+zsh   `ZDOTDIR` points at glassterm's `.zshenv`, which restores your
+      `ZDOTDIR`, sources your `.zshenv` and adds the hooks. zsh then reads
+      your other startup files as usual.
+bash  `bash --rcfile {glassterm}/shell/bash/glassterm.bash`, which sources
+      `/etc/bash.bashrc` and `~/.bashrc` first. Login shells (`-l`) ignore
+      --rcfile and run without the hook. bash older than 4.4 (macOS's
+      /bin/bash) cannot report command starts, so |glassterm.rerun()| cannot
+      detect a busy shell there.
+fish  `fish --init-command 'source {glassterm}/shell/fish/glassterm.fish'`.
+
+Other shells run without the hook. Every glassterm shell has `GLASSTERM=1`
+and `GLASSTERM_ID={n}` in its environment.
+
+==============================================================================
+8. Highlights                                           *glassterm-highlights*
+
+All groups link to a standard group by default.
+
+    *hl-GlasstermNormal*      NormalFloat     terminal background
+    *hl-GlasstermBorder*      FloatBorder     border of glass, drawer, zoom
+    *hl-GlasstermAccent*      FloatTitle      drop edge, capsule border
+    *hl-GlasstermTitle*       FloatTitle      shell name
+    *hl-GlasstermHint*        Comment         folder, key hints
+    *hl-GlasstermError*       DiagnosticError border after a failed command
+    *hl-GlasstermErrorChip*   DiagnosticVirtualTextError   `exit n` chip
+    *hl-GlasstermTab*         Comment         other numbered terminals
+    *hl-GlasstermTabActive*   PmenuSel        the shown terminal
+
+==============================================================================
+9. Health                                                   *glassterm-health*
+
+`:checkhealth glassterm` checks the Neovim version, whether |glassterm.setup()|
+ran, whether your shell gets |glassterm-integration|, and whether each running
+terminal is sending signals.
+
+ vim:tw=78:ts=8:ft=help:norl:

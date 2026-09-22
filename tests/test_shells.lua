@@ -62,11 +62,17 @@ end
 local child = H.new_child()
 local home
 
-local function start(shell, files)
+-- `rc` always exists (empty unless given): with no startup files at all,
+-- Debian/Ubuntu zsh launches its interactive new-user wizard.
+local function start(shell, files, rc)
+    files = vim.deepcopy(files or {})
+    if rc and not files[rc] then
+        files[rc] = {}
+    end
     home = vim.fn.tempname()
     vim.fn.mkdir(home, "p")
     home = vim.uv.fs_realpath(home)
-    for name, lines in pairs(files or {}) do
+    for name, lines in pairs(files) do
         vim.fn.mkdir(vim.fs.dirname(home .. "/" .. name), "p")
         vim.fn.writefile(lines, home .. "/" .. name)
     end
@@ -74,7 +80,12 @@ local function start(shell, files)
     child.lua("vim.env.HOME = ...; vim.env.ZDOTDIR = nil; vim.fn.chdir(...)", { home })
     child.setup({ shell = shell, prewarm = false })
     child.lua("require('glassterm').prewarm()")
-    H.wait(child, "term() and term().integrated and term().cwd ~= nil", 8000, "first prompt from " .. shell[1])
+    H.wait(
+        child,
+        "term() and term().integrated and term().cwd ~= nil",
+        8000,
+        "first prompt from " .. shell[1]
+    )
 end
 
 local function send(text)
@@ -113,13 +124,13 @@ local function shell_set(bin, rc, extra)
     })
 
     set["loads the user's own rc file"] = function()
-        start({ bin }, { [rc] = { 'touch "$HOME/rc-ran"' } })
+        start({ bin }, { [rc] = { 'touch "$HOME/rc-ran"' } }, rc)
         wait_file_lines("rc-ran", 0)
         eq(read("rc-ran") ~= nil, true)
     end
 
     set["reports the folder at each prompt"] = function()
-        start({ bin })
+        start({ bin }, nil, rc)
         eq(child.lua_get("term().cwd"), home)
         vim.fn.mkdir(home .. "/sub dir", "p")
         send('cd "' .. home .. '/sub dir"')
@@ -127,7 +138,7 @@ local function shell_set(bin, rc, extra)
     end
 
     set["reports each command's exit status"] = function()
-        start({ bin })
+        start({ bin }, nil, rc)
         send("false")
         H.wait(child, "term().status == 1", 3000, "status 1")
         send("true")
@@ -135,14 +146,14 @@ local function shell_set(bin, rc, extra)
     end
 
     set["does not report a failure for the rc file's last command"] = function()
-        start({ bin }, { [rc] = { "false" } })
+        start({ bin }, { [rc] = { "false" } }, rc)
         vim.uv.sleep(300)
         eq(child.lua_get("term().status == nil or term().status == 0"), true)
         eq(child.lua_get("#_G.notes"), 0)
     end
 
     set["re-runs the previous command and reports the result"] = function()
-        start({ bin })
+        start({ bin }, nil, rc)
         send('echo run >> "$HOME/log"')
         wait_file_lines("log", 1)
         H.wait(child, "term().status == 0 and not term().busy", 3000)
@@ -156,7 +167,7 @@ local function shell_set(bin, rc, extra)
     end
 
     set["re-run clears a half-typed command first"] = function()
-        start({ bin })
+        start({ bin }, nil, rc)
         send('echo run >> "$HOME/log"')
         wait_file_lines("log", 1)
         H.wait(child, "term().status == 0", 3000)
@@ -174,13 +185,15 @@ end
 
 T["zsh"] = shell_set("zsh", ".zshrc", {
     ["restores the user's ZDOTDIR for their files and child shells"] = function()
-        start({ "zsh" })
+        start({ "zsh" }, nil, ".zshrc")
         send('print -r -- "${ZDOTDIR-unset}" > "$HOME/zdotdir.txt"')
         eq(wait_file_lines("zdotdir.txt", 1), { "unset" })
     end,
     ["honours a ZDOTDIR the user already had"] = function()
         home = nil
-        local dir = vim.uv.fs_realpath(vim.fn.tempname():match("^(.*)/")) .. "/gt-zdot-" .. vim.uv.hrtime()
+        local dir = vim.uv.fs_realpath(vim.fn.tempname():match("^(.*)/"))
+            .. "/gt-zdot-"
+            .. vim.uv.hrtime()
         vim.fn.mkdir(dir, "p")
         vim.fn.writefile({ 'touch "$ZDOTDIR/zshrc-ran"' }, dir .. "/.zshrc")
         child.start_editor()
@@ -191,7 +204,7 @@ T["zsh"] = shell_set("zsh", ".zshrc", {
         eq(vim.fn.filereadable(dir .. "/zshrc-ran"), 1)
     end,
     ["marks a running command busy until it ends"] = function()
-        start({ "zsh" })
+        start({ "zsh" }, nil, ".zshrc")
         send("sleep 0.6")
         H.wait(child, "term().busy == true", 2000, "busy")
         child.lua("require('glassterm').rerun()")

@@ -85,7 +85,8 @@ function M.styles.drawer(o, e)
         col = right and e.width - w - 1 or 0,
         width = w,
         height = e.height,
-        border = right and { "", "", "", "", "", "", "", "│" } or { "", "", "", "│", "", "", "", "" },
+        border = right and { "", "", "", "", "", "", "", "│" }
+            or { "", "", "", "│", "", "", "", "" },
         border_hl = "GlasstermBorder",
         slot = "winbar",
     }

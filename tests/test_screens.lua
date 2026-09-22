@@ -30,10 +30,16 @@ local SIGNALS = {
 
 local function open(opts, toggle_arg)
     -- Function keys: modifier labels differ by OS (⌥t on macOS, Alt-t elsewhere).
-    local base = { shell = H.FAKE_SHELL, prewarm = false, keys = { toggle = "<F7>", zoom = "<F8>" } }
+    local base =
+        { shell = H.FAKE_SHELL, prewarm = false, keys = { toggle = "<F7>", zoom = "<F8>" } }
     child.setup(vim.tbl_deep_extend("force", base, opts or {}))
     child.lua("require('glassterm').toggle(...)", { toggle_arg })
-    H.wait(child, "vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]:find('glassterm test') ~= nil", 2000, "shell output")
+    H.wait(
+        child,
+        "vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]:find('glassterm test') ~= nil",
+        2000,
+        "shell output"
+    )
 end
 
 T["glass"] = function()
@@ -71,7 +77,11 @@ end
 T["numbered tabs"] = function()
     open()
     child.lua("require('glassterm').toggle(2)")
-    H.wait(child, "vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]:find('glassterm test') ~= nil", 2000)
+    H.wait(
+        child,
+        "vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]:find('glassterm test') ~= nil",
+        2000
+    )
     expect.reference_screenshot(child.get_screenshot())
 end
 
