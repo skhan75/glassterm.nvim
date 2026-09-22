@@ -65,7 +65,19 @@ local home
 local function start(shell, files)
     home = H.shell_home(files)
     child.start_editor()
-    child.lua("vim.env.HOME = ...; vim.env.ZDOTDIR = nil; vim.fn.chdir(...)", { home })
+    child.lua(
+        [[
+        local home = ...
+        vim.env.HOME = home
+        vim.env.ZDOTDIR = nil
+        -- CI runners set these; shells must use the throwaway HOME instead.
+        for _, v in ipairs({ "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME" }) do
+            vim.env[v] = nil
+        end
+        vim.fn.chdir(home)
+    ]],
+        { home }
+    )
     child.setup({ shell = shell, prewarm = false })
     child.lua("require('glassterm').prewarm()")
     H.wait_prompt(child)
@@ -81,8 +93,8 @@ local function read(name)
 end
 
 local function wait_file_lines(name, n)
-    local deadline = vim.uv.now() + 5000
-    while vim.uv.now() < deadline do
+    local deadline = H.now() + 5000
+    while H.now() < deadline do
         local lines = read(name)
         if lines and #lines >= n then
             return lines

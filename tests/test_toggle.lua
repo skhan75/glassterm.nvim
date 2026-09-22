@@ -284,8 +284,8 @@ T["safety"]["quitting Neovim does not stop on the hidden shell"] = function()
     child.lua("gt().prewarm()")
     H.sleep(100)
     child.lua_notify("vim.cmd('qa')")
-    local deadline = vim.uv.now() + 3000
-    while child.is_running() and vim.uv.now() < deadline do
+    local deadline = H.now() + 3000
+    while child.is_running() and H.now() < deadline do
         local ok = pcall(child.lua_get, "1")
         if not ok then
             break

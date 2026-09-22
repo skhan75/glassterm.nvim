@@ -32,11 +32,17 @@ function H.new_child()
     return child
 end
 
+---Milliseconds from a real clock. Not vim.uv.now(): that is the event
+---loop's cached time and stands still in a loop that never runs the loop.
+function H.now()
+    return vim.uv.hrtime() / 1e6
+end
+
 ---Poll a Lua expression in the child until it is truthy.
 ---@param args table|nil values for `...` in `expr`
 function H.wait(child, expr, timeout_ms, what, args)
-    local deadline = vim.uv.now() + (timeout_ms or 3000)
-    while vim.uv.now() < deadline do
+    local deadline = H.now() + (timeout_ms or 3000)
+    while H.now() < deadline do
         local v = child.lua_get(expr, args)
         -- nil comes back as vim.NIL, which is truthy: treat it as "not yet".
         if v and v ~= vim.NIL then
