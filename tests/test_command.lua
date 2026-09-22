@@ -125,13 +125,10 @@ T["checkhealth"]["confirms a live terminal is sending signals"] = function()
     if vim.fn.executable("zsh") == 0 then
         MiniTest.skip("zsh is not installed")
     end
-    local home = vim.fn.tempname()
-    vim.fn.mkdir(home, "p")
-    vim.fn.writefile({}, home .. "/.zshrc")
-    child.lua("vim.env.HOME = ...; vim.env.ZDOTDIR = nil", { home })
+    child.lua("vim.env.HOME = ...; vim.env.ZDOTDIR = nil", { H.shell_home() })
     setup({ shell = { "zsh" } })
     child.lua("require('glassterm').prewarm()")
-    H.wait(child, "term() and term().integrated", 8000, "first prompt")
+    H.wait_prompt(child)
     eq(health():match("OK terminal 1: shell integration active") ~= nil, true)
 end
 

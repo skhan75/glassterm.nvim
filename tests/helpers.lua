@@ -47,6 +47,49 @@ function H.wait(child, expr, timeout_ms, what, args)
     error(("timed out after %dms waiting for %s"):format(timeout_ms or 3000, what or expr), 2)
 end
 
+---A throwaway HOME for real shells. Defaults keep zsh non-interactive at
+---startup on any machine: an empty .zshrc (Debian/Ubuntu zsh launches its
+---new-user wizard without one) and skip_global_compinit (Ubuntu's global
+---zshrc runs compinit, which stops at a prompt on insecure fpath dirs).
+---@param files table<string, string[]>|nil extra files, relative to HOME
+---@return string home realpath
+function H.shell_home(files)
+    local home = vim.fn.tempname()
+    vim.fn.mkdir(home, "p")
+    home = vim.uv.fs_realpath(home)
+    local all = vim.tbl_extend("keep", files or {}, {
+        [".zshrc"] = {},
+        [".zshenv"] = { "skip_global_compinit=1" },
+    })
+    for name, lines in pairs(all) do
+        vim.fn.mkdir(vim.fs.dirname(home .. "/" .. name), "p")
+        vim.fn.writefile(lines, home .. "/" .. name)
+    end
+    return home
+end
+
+---Wait for terminal 1's first shell prompt; on timeout, fail with what the
+---terminal is showing, so a hung startup explains itself in CI logs.
+function H.wait_prompt(child, timeout_ms)
+    local ok, err = pcall(
+        H.wait,
+        child,
+        "term() and term().integrated and term().cwd ~= nil",
+        timeout_ms or 8000
+    )
+    if not ok then
+        local screen = child.lua_get([[
+            (function()
+                local t = require("glassterm.term").terms[1]
+                if not t then return "(no terminal)" end
+                local lines = vim.api.nvim_buf_get_lines(t.buf, 0, -1, false)
+                return table.concat(vim.tbl_filter(function(l) return l ~= "" end, lines), "\n")
+            end)()
+        ]])
+        error(("%s\n--- terminal showed ---\n%s"):format(err, screen), 2)
+    end
+end
+
 function H.sleep(ms)
     vim.uv.sleep(ms)
 end
