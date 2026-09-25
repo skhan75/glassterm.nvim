@@ -1,6 +1,8 @@
 # glassterm.nvim
 
-A floating terminal for Neovim that's already running when you ask for it.
+A Neovim floating terminal plugin whose shell is already running when you ask
+for it: an instant toggle, four float styles (centered, Quake-style drop-down,
+side drawer, capsule) and shell integration for zsh, bash and fish.
 
 ![glassterm: toggle, run, hide, zoom](assets/hero.gif)
 
@@ -11,6 +13,18 @@ A floating terminal for Neovim that's already running when you ask for it.
   the border red when a command fails, and can re-run the last command from
   your code.
 - **No dependencies.** Neovim 0.11+.
+
+## How it compares
+
+- **toggleterm.nvim** is the mature all-rounder: splits, tabs, many terminals,
+  a big ecosystem. glassterm keeps one terminal, starts its shell in advance,
+  and adds shell integration (folder in the title, red border on failure,
+  re-run with a result notification).
+- **snacks.nvim's terminal** is great if you already run snacks. glassterm is
+  standalone and gives you the four float shapes and the shell hook.
+- **vim-floaterm** offers many window positions for Vim and Neovim.
+  glassterm is Neovim-only and trades breadth for the instant toggle and the
+  shell integration.
 
 ## Install
 
