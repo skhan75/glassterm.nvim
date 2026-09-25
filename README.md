@@ -2,7 +2,7 @@
 
 A floating terminal that is already running when you press the key.
 
-![glassterm: toggle, run, hide, zoom](assets/hero.gif)
+![toggle the terminal, run something, hide it, zoom](assets/hero.gif)
 
 Press <kbd>Alt</kbd>+<kbd>t</kbd> and a shell appears over your code in about
 4 ms, because nothing starts. glassterm keeps the shell alive in a hidden
